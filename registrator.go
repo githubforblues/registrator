@@ -19,6 +19,7 @@ var Version string
 
 var versionChecker = usage.NewChecker("registrator", Version)
 
+//命令行参数的收集处理
 var hostIp = flag.String("ip", "", "IP for ports mapped to the host")
 var internal = flag.Bool("internal", false, "Use internal ports instead of published ones")
 var explicit = flag.Bool("explicit", false, "Only register containers which have SERVICE_NAME label set")
@@ -39,6 +40,7 @@ func getopt(name, def string) string {
 	return def
 }
 
+//使用此方法来避免到处写err判断
 func assert(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -46,20 +48,24 @@ func assert(err error) {
 }
 
 func main() {
+	//仅打印版本信息
 	if len(os.Args) == 2 && os.Args[1] == "--version" {
 		versionChecker.PrintVersion()
 		os.Exit(0)
 	}
 	log.Printf("Starting registrator %s ...", Version)
 
+	//定义命令行解析出错时自动调用的方法
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  %s [options] <registry URI>\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
+	//解析命令行参数
 	flag.Parse()
 
+	//存在无法解析的命令行参数时，打印的信息
 	if flag.NArg() != 1 {
 		if flag.NArg() == 0 {
 			fmt.Fprint(os.Stderr, "Missing required argument for registry URI.\n\n")
@@ -76,6 +82,7 @@ func main() {
 		log.Println("Forcing host IP to", *hostIp)
 	}
 
+	//对输入的命令行参数的逻辑关系进行判断
 	if (*refreshTtl == 0 && *refreshInterval > 0) || (*refreshTtl > 0 && *refreshInterval == 0) {
 		assert(errors.New("-ttl and -ttl-refresh must be specified together or not at all"))
 	} else if *refreshTtl > 0 && *refreshTtl <= *refreshInterval {
@@ -86,6 +93,7 @@ func main() {
 		assert(errors.New("-retry-interval must be greater than 0"))
 	}
 
+	//指定docker的本地连接方式
 	dockerHost := os.Getenv("DOCKER_HOST")
 	if dockerHost == "" {
 		if runtime.GOOS != "windows" {
@@ -95,6 +103,8 @@ func main() {
 		}
 	}
 
+	//通过环境变量创建一个到本地docker的客户端连接
+	//文档 https://docs.docker.com/engine/api/latest/
 	docker, err := dockerapi.NewClientFromEnv()
 	assert(err)
 
@@ -102,6 +112,7 @@ func main() {
 		assert(errors.New("-deregister must be \"always\" or \"on-success\""))
 	}
 
+	//通过b与docker server端、storage server端通信和交互
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
 		HostIp:          *hostIp,
 		Internal:        *internal,
@@ -116,6 +127,8 @@ func main() {
 
 	assert(err)
 
+	//设置retryAttempts为-1时，通过死循环进行无限重试，直到连接成功，跳出死循环
+	//设置retryAttempts不为-1时，在重试次数达到上限前，循环进行重试
 	attempt := 0
 	for *retryAttempts == -1 || attempt <= *retryAttempts {
 		log.Printf("Connecting to backend (%v/%v)", attempt, *retryAttempts)
@@ -134,15 +147,20 @@ func main() {
 	}
 
 	// Start event listener before listing containers to avoid missing anything
+	//在列出容器之前启动事件监听器，以避免遗漏任何内容
+	//下面创建的events是一个通道，当发生docker容器的创建/销毁时，docker service就会把相应的event传递到该通道中
 	events := make(chan *dockerapi.APIEvents)
 	assert(docker.AddEventListener(events))
 	log.Println("Listening for Docker events ...")
 
+	//获取本地docker中的容器信息
 	b.Sync(false)
 
+	//创建一个只包含空结构体的通道，常用于通知所有协程退出，即quit
 	quit := make(chan struct{})
 
 	// Start the TTL refresh timer
+	//启动刷新定时器
 	if *refreshInterval > 0 {
 		ticker := time.NewTicker(time.Duration(*refreshInterval) * time.Second)
 		go func() {
@@ -159,6 +177,7 @@ func main() {
 	}
 
 	// Start the resync timer if enabled
+	//启动同步定时器，用于将docker容器的变更信息同步到程序进程中
 	if *resyncInterval > 0 {
 		resyncTicker := time.NewTicker(time.Duration(*resyncInterval) * time.Second)
 		go func() {
@@ -175,6 +194,7 @@ func main() {
 	}
 
 	// Process Docker events
+	//将events转换为storage server中的添加条目或删除条目操作
 	for msg := range events {
 		switch msg.Status {
 		case "start":

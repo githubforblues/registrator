@@ -18,8 +18,8 @@ import (
 var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[0-9]+(?::udp)?$`)
 
 type Bridge struct {
-	sync.Mutex
-	registry       RegistryAdapter
+	sync.Mutex                     //定义一个互斥锁
+	registry       RegistryAdapter //定义所连接的存储端，存储端实例是适配器抽象RegistryAdapter的实现
 	docker         *dockerapi.Client
 	services       map[string][]*Service
 	deadContainers map[string]*DeadContainer
@@ -47,6 +47,7 @@ func New(docker *dockerapi.Client, adapterUri string, config Config) (*Bridge, e
 }
 
 func (b *Bridge) Ping() error {
+	//此处没办法直接找到Ping方法，需要先确定registry对应的结构体，才能找到该方法的实现
 	return b.registry.Ping()
 }
 
@@ -202,7 +203,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	// Extract configured host port mappings, relevant when using --net=host
 	for port, _ := range container.Config.ExposedPorts {
-		published := []dockerapi.PortBinding{ {"0.0.0.0", port.Port()}, }
+		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
 		ports[string(port)] = servicePort(container, port, published)
 	}
 
@@ -309,7 +310,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 				service.IP = containerIp
 			}
 			log.Println("using container IP " + service.IP + " from label '" +
-				b.config.UseIpFromLabel  + "'")
+				b.config.UseIpFromLabel + "'")
 		} else {
 			log.Println("Label '" + b.config.UseIpFromLabel +
 				"' not found in container configuration")

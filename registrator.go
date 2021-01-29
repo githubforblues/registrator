@@ -156,7 +156,7 @@ func main() {
 	//获取本地docker中的容器信息
 	b.Sync(false)
 
-	//创建一个只包含空结构体的通道，常用于通知所有协程退出，即quit
+	//创建一个只包含空结构体的通道，常用于通知所有协程退出
 	quit := make(chan struct{})
 
 	// Start the TTL refresh timer
@@ -168,7 +168,7 @@ func main() {
 				select {
 				case <-ticker.C:
 					b.Refresh()
-				case <-quit:
+				case <-quit: //空结构体的通道无需传入元素，只需读等待阻塞在case语句中，等到close该通道时，才会解除阻塞
 					ticker.Stop()
 					return
 				}
@@ -195,6 +195,7 @@ func main() {
 
 	// Process Docker events
 	//将events转换为storage server中的添加条目或删除条目操作
+	//主协程会在这里死循环
 	for msg := range events {
 		switch msg.Status {
 		case "start":

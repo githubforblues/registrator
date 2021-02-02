@@ -107,13 +107,7 @@ func (b *Bridge) Sync(quiet bool) {
 	}
 
 	log.Printf("Syncing services on %d containers", len(containers))
-
-	//打印所有容器信息
-	for _, item := range containers {
-		//log.Printf("container: %s", item)
-		log.Println("container:")
-	}
-	log.Printf("%s", containers)
+	log.Printf("Syncing services on %d containers", len(containers))
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素

@@ -18,19 +18,22 @@ import (
 var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[0-9]+(?::udp)?$`)
 
 type Bridge struct {
-	sync.Mutex                     //定义一个互斥锁
-	registry       RegistryAdapter //定义所连接的存储端，存储端实例是适配器抽象RegistryAdapter的实现
-	docker         *dockerapi.Client
-	services       map[string][]*Service
-	deadContainers map[string]*DeadContainer
-	config         Config
+	sync.Mutex                               //定义一个互斥锁
+	registry       RegistryAdapter           //定义存储端实例，是适配器抽象RegistryAdapter的实现
+	docker         *dockerapi.Client         //定义docker本地连接的实例
+	services       map[string][]*Service     //存放所有容器信息，用于中转
+	deadContainers map[string]*DeadContainer //存放所有刚失效的容器，在等到超时时间过去之后，就会将它们彻底删除
+	config         Config                    //Config结构体的实例
 }
 
 func New(docker *dockerapi.Client, adapterUri string, config Config) (*Bridge, error) {
+	//表示解析传入的URI，正常的URI格式为 scheme://user:pass@host.com:port/path?k=v#f
 	uri, err := url.Parse(adapterUri)
 	if err != nil {
 		return nil, errors.New("bad adapter uri: " + adapterUri)
 	}
+
+	//事先会将各种存储后端的信息注册到AdapterFactories中，当用户通过命令行参数给定一个URI时，就会根据其中的scheme来确定使用注册上来的哪一种后端，比如consul
 	factory, found := AdapterFactories.Lookup(uri.Scheme)
 	if !found {
 		return nil, errors.New("unrecognized adapter: " + adapterUri)
@@ -69,6 +72,7 @@ func (b *Bridge) Refresh() {
 	b.Lock()
 	defer b.Unlock()
 
+	//每一次刷新，都会将deadContainers的超时计数器减一，当减到零时就将其删除
 	for containerId, deadContainer := range b.deadContainers {
 		deadContainer.TTL -= b.config.RefreshInterval
 		if deadContainer.TTL <= 0 {
@@ -76,6 +80,7 @@ func (b *Bridge) Refresh() {
 		}
 	}
 
+	//然后将b中存储的容器信息与存储端核对一遍（不过真正实现的方法是空的）
 	for containerId, services := range b.services {
 		for _, service := range services {
 			err := b.registry.Refresh(service)
@@ -92,6 +97,7 @@ func (b *Bridge) Sync(quiet bool) {
 	b.Lock()
 	defer b.Unlock()
 
+	//列出所有docker容器
 	containers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{})
 	if err != nil && quiet {
 		log.Println("error listing containers, skipping sync")
@@ -102,9 +108,17 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
+	//打印所有容器信息
+	for _, item := range containers {
+		log.Printf("container: ", item)
+	}
+
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
+	//range数组会返回两个值，第一个为索引，第二个为数组元素
 	for _, listing := range containers {
 		services := b.services[listing.ID]
+		log.Printf("services: ", services)
+		//这里还是要搞清楚service的含义
 		if services == nil {
 			b.add(listing.ID, quiet)
 		} else {

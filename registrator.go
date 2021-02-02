@@ -113,6 +113,7 @@ func main() {
 	}
 
 	//通过b与docker server端、storage server端通信和交互
+	//根据该项目的文档，flag.Arg(0)表示的就是后端存储的URI
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
 		HostIp:          *hostIp,
 		Internal:        *internal,

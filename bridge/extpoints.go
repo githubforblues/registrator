@@ -19,6 +19,7 @@ type extensionPoint struct {
 	components map[string]interface{}
 }
 
+//var AdapterFactories = &adapterFactoryExt{newExtensionPoint(new(AdapterFactory)),}
 func newExtensionPoint(iface interface{}) *extensionPoint {
 	ep := &extensionPoint{
 		iface:      reflect.TypeOf(iface).Elem(),

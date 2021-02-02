@@ -15,6 +15,7 @@ import (
 
 const DefaultInterval = "10s"
 
+//将consul注册到注册中心
 func init() {
 	f := new(Factory)
 	bridge.Register(f, "consul")
@@ -30,6 +31,7 @@ func (r *ConsulAdapter) interpolateService(script string, service *bridge.Servic
 
 type Factory struct{}
 
+//这个New方法返回的是consul client对象
 func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 	config := consulapi.DefaultConfig()
 	if uri.Scheme == "consul-unix" {

@@ -257,7 +257,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 			continue
 		}
 		b.services[container.ID] = append(b.services[container.ID], service)
-		log.Println(b.services)
+		log.Println("%v", b.services)
 		log.Println("added:", container.ID[:12], service.ID)
 	}
 }

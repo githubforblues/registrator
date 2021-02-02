@@ -110,8 +110,10 @@ func (b *Bridge) Sync(quiet bool) {
 
 	//打印所有容器信息
 	for _, item := range containers {
-		log.Printf("container: %s", item)
+		//log.Printf("container: %s", item)
+		log.Println("container:")
 	}
+	log.Printf("%s", containers)
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素

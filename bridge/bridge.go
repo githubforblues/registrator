@@ -177,6 +177,7 @@ func (b *Bridge) Sync(quiet bool) {
 			for _, listing := range b.services {
 				for _, service := range listing {
 					if service.Name == extService.Name && serviceContainerName == service.Origin.container.Name[1:] {
+						//表示直接跳到Outer执行，而不是跳到上层循环执行
 						continue Outer
 					}
 				}
@@ -193,6 +194,7 @@ func (b *Bridge) Sync(quiet bool) {
 }
 
 func (b *Bridge) add(containerId string, quiet bool) {
+	//如果需要增加的容器正好处于deadContainers中，则将其从deadContainers中取回
 	if d := b.deadContainers[containerId]; d != nil {
 		b.services[containerId] = d.Services
 		delete(b.deadContainers, containerId)
@@ -204,6 +206,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		return
 	}
 
+	//查看container的inspect
 	container, err := b.docker.InspectContainer(containerId)
 	if err != nil {
 		log.Println("unable to inspect container:", containerId[:12], err)
@@ -254,6 +257,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 			continue
 		}
 		b.services[container.ID] = append(b.services[container.ID], service)
+		log.Println(b.services)
 		log.Println("added:", container.ID[:12], service.ID)
 	}
 }

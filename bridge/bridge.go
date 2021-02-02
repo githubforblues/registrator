@@ -21,7 +21,7 @@ type Bridge struct {
 	sync.Mutex                               //定义一个互斥锁
 	registry       RegistryAdapter           //定义存储端实例，是适配器抽象RegistryAdapter的实现
 	docker         *dockerapi.Client         //定义docker本地连接的实例
-	services       map[string][]*Service     //存放所有容器信息，用于中转
+	services       map[string][]*Service     //存放从docker本地获取到的容器信息，service指的是IP+PORT，所以一个容器对应一个services，并且包含多个service
 	deadContainers map[string]*DeadContainer //存放所有刚失效的容器，在等到超时时间过去之后，就会将它们彻底删除
 	config         Config                    //Config结构体的实例
 }
@@ -110,14 +110,14 @@ func (b *Bridge) Sync(quiet bool) {
 
 	//打印所有容器信息
 	for _, item := range containers {
-		log.Printf("container: ", item)
+		log.Printf("container: %s", item)
 	}
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素
 	for _, listing := range containers {
 		services := b.services[listing.ID]
-		log.Printf("services: ", services)
+		log.Printf("services: %s", services)
 		//这里还是要搞清楚service的含义
 		if services == nil {
 			b.add(listing.ID, quiet)

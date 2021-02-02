@@ -155,6 +155,7 @@ func main() {
 	log.Println("Listening for Docker events ...")
 
 	//获取本地docker中的容器信息
+	log.Println("First Sync")
 	b.Sync(false)
 
 	//创建一个只包含空结构体的通道，常用于通知所有协程退出
@@ -168,6 +169,7 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
+					log.Println("Refresh")
 					b.Refresh()
 				case <-quit: //空结构体的通道无需传入元素，只需读等待阻塞在case语句中，等到close该通道时，才会解除阻塞
 					ticker.Stop()
@@ -185,6 +187,7 @@ func main() {
 			for {
 				select {
 				case <-resyncTicker.C:
+					log.Println("Sync")
 					b.Sync(true)
 				case <-quit:
 					resyncTicker.Stop()
@@ -200,8 +203,10 @@ func main() {
 	for msg := range events {
 		switch msg.Status {
 		case "start":
+			log.Println("Add")
 			go b.Add(msg.ID)
 		case "die":
+			log.Println("RemoveOnExit")
 			go b.RemoveOnExit(msg.ID)
 		}
 	}

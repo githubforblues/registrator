@@ -107,15 +107,16 @@ func (b *Bridge) Sync(quiet bool) {
 	}
 
 	log.Printf("Syncing services on %d containers", len(containers))
-	log.Printf("Syncing services on %d containers", len(containers))
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素
 	for _, listing := range containers {
 		services := b.services[listing.ID]
 		log.Printf("services: %s", services)
-		//这里还是要搞清楚service的含义
+
+		//如果没找到，则添加，这里是核心逻辑入口
 		if services == nil {
+			log.Println("listing.ID: %s", listing.ID)
 			b.add(listing.ID, quiet)
 		} else {
 			for _, service := range services {

@@ -251,17 +251,18 @@ func (b *Bridge) add(containerId string, quiet bool) {
 			}
 			continue
 		}
+		//将service存放到后端存储中
 		err := b.registry.Register(service)
 		if err != nil {
 			log.Println("register failed:", service, err)
 			continue
 		}
 		b.services[container.ID] = append(b.services[container.ID], service)
-		log.Println("%v", b.services)
 		log.Println("added:", container.ID[:12], service.ID)
 	}
 }
 
+//创建新的service
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]

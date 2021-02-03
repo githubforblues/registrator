@@ -109,7 +109,7 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
-	r, _ = json.Marshal(containers)
+	r, _ := json.Marshal(containers)
 	log.Printf("containers_j: %s", string(r))
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..

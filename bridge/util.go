@@ -102,6 +102,7 @@ func servicePort(container *dockerapi.Container, port dockerapi.Port, published 
 		hip = container.NetworkSettings.Networks[nm].IPAddress
 	}
 
+	//string(port)示例: 8500/tcp
 	exposedPort := strings.Split(string(port), "/")
 	ep = exposedPort[0]
 	if len(exposedPort) == 2 {
@@ -111,6 +112,7 @@ func servicePort(container *dockerapi.Container, port dockerapi.Port, published 
 	}
 
 	// Nir: support docker NetworkSettings
+	//下面这个eip指的就是docker的IP
 	eip = container.NetworkSettings.IPAddress
 	if eip == "" {
 		for _, network := range container.NetworkSettings.Networks {

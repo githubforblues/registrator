@@ -214,7 +214,6 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	//查看要添加容器的inspect
 	container, err := b.docker.InspectContainer(containerId)
-	log.Println("container: %+v", string(container))
 	if err != nil {
 		log.Println("unable to inspect container:", containerId[:12], err)
 		return

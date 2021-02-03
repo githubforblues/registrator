@@ -237,10 +237,13 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	// Extract runtime port mappings, relevant when using --net=bridge
 	//获取从inspect中找到的，正在工作的对外映射端口
+	c := 0
 	for port, published := range container.NetworkSettings.Ports {
 		log.Println("port_b: ", string(port))
 		ports[string(port)] = servicePort(container, port, published)
+		c++
 	}
+	log.Println("c: ", c)
 
 	if len(ports) == 0 && !quiet {
 		log.Println("ignored:", container.ID[:12], "no published ports")

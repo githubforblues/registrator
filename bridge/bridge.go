@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"encoding/json"
 
 	dockerapi "github.com/fsouza/go-dockerclient"
 )
@@ -108,15 +109,12 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
-	log.Printf("containers_s: %s", containers)
-	log.Printf("containers_v: %v", containers)
+	log.Printf("containers_j: %s", string(json.Marshal(containers)))
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素
 	for _, listing := range containers {
 		//先看下b中是否已经存放了该service的信息
-		log.Printf("listing_s: %s", listing)
-		log.Printf("listing_v: %v", listing)
 		log.Printf("listing_id: %s", listing.ID)
 		services := b.services[listing.ID]
 

@@ -286,7 +286,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 	}
 }
 
-//创建新的service
+//将ServicePort类型转换为Service类型
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]

@@ -93,7 +93,7 @@ func main() {
 		assert(errors.New("-retry-interval must be greater than 0"))
 	}
 
-	//指定docker的本地连接方式
+	//指定本地docker的连接方式，需要一个sock
 	dockerHost := os.Getenv("DOCKER_HOST")
 	if dockerHost == "" {
 		if runtime.GOOS != "windows" {
@@ -103,7 +103,7 @@ func main() {
 		}
 	}
 
-	//通过环境变量创建一个到本地docker的客户端连接
+	//通过环境变量创建一个到本地docker的客户端连接，使用的是dockerapi
 	//文档 https://docs.docker.com/engine/api/latest/
 	docker, err := dockerapi.NewClientFromEnv()
 	assert(err)
@@ -112,8 +112,8 @@ func main() {
 		assert(errors.New("-deregister must be \"always\" or \"on-success\""))
 	}
 
-	//通过b与docker server端、storage server端通信和交互
-	//根据该项目的文档，flag.Arg(0)表示的就是后端存储的URI
+	//Bridge对象能够与本地docker、storage server端交互，并用于保存容器信息
+	//根据该项目的文档，flag.Arg(0)表示的就是后端存储的URL
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
 		HostIp:          *hostIp,
 		Internal:        *internal,
@@ -148,8 +148,8 @@ func main() {
 	}
 
 	// Start event listener before listing containers to avoid missing anything
-	//在列出容器之前启动事件监听器，以避免遗漏任何内容
-	//下面创建的events是一个通道，当发生docker容器的创建/销毁时，docker service就会把相应的event传递到该通道中
+	//在列出docker容器信息之前启动事件监听器，以避免遗漏任何内容
+	//下面创建的events是一个通道，当发生docker容器的创建/销毁时，dockerapi就会把相应的event传递到该通道中
 	events := make(chan *dockerapi.APIEvents)
 	assert(docker.AddEventListener(events))
 	log.Println("Listening for Docker events ...")
@@ -171,7 +171,7 @@ func main() {
 				case <-ticker.C:
 					log.Println("Refresh")
 					b.Refresh()
-				case <-quit: //空结构体的通道无需传入元素，只需读等待阻塞在case语句中，等到close该通道时，才会解除阻塞
+				case <-quit: 	//空结构体的通道无需传入元素，只需读等待阻塞在case语句中，等到close该通道时，才会解除阻塞
 					ticker.Stop()
 					return
 				}

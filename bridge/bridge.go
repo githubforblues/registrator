@@ -20,8 +20,8 @@ var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[
 type Bridge struct {
 	sync.Mutex                               //定义一个互斥锁
 	registry       RegistryAdapter           //定义存储端实例，是适配器抽象RegistryAdapter的实现
-	docker         *dockerapi.Client         //定义docker本地连接的实例
-	services       map[string][]*Service     //存放从docker本地获取到的容器信息，service指的是IP+PORT，所以一个容器对应一个services，并且包含多个service
+	docker         *dockerapi.Client         //定义本地docker连接的实例
+	services       map[string][]*Service     //存放从本地docker获取到的容器信息
 	deadContainers map[string]*DeadContainer //存放所有刚失效的容器，在等到超时时间过去之后，就会将它们彻底删除
 	config         Config                    //Config结构体的实例
 }
@@ -80,7 +80,7 @@ func (b *Bridge) Refresh() {
 		}
 	}
 
-	//然后将b中存储的容器信息与存储端核对一遍（不过真正实现的方法是空的）
+	//每一次刷新，都会将b中存储的容器信息与存储端核对一遍（不过真正实现的方法是空的，也就是没有实现）
 	for containerId, services := range b.services {
 		for _, service := range services {
 			err := b.registry.Refresh(service)
@@ -108,14 +108,20 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
+	log.Printf("containers_s: %s", containers)
+	log.Printf("containers_v: %v", containers)
+
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素
 	for _, listing := range containers {
+		//先看下b中是否已经存放了该service的信息
+		log.Printf("listing_s: %s", listing)
+		log.Printf("listing_v: %v", listing)
+		log.Printf("listing_id: %s", listing.ID)
 		services := b.services[listing.ID]
 
 		//如果没找到，则添加，这里是核心逻辑入口
 		if services == nil {
-			log.Println("listing.ID: %s", listing.ID)
 			b.add(listing.ID, quiet)
 		} else {
 			for _, service := range services {
@@ -199,29 +205,39 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		delete(b.deadContainers, containerId)
 	}
 
+	//如果需要增加的容器已存在于b中，则忽略，并返回
 	if b.services[containerId] != nil {
 		log.Println("container, ", containerId[:12], ", already exists, ignoring")
 		// Alternatively, remove and readd or resubmit.
 		return
 	}
 
-	//查看container的inspect
+	//查看要添加容器的inspect
 	container, err := b.docker.InspectContainer(containerId)
+	log.Println("container: %s", string(container))
 	if err != nil {
 		log.Println("unable to inspect container:", containerId[:12], err)
 		return
 	}
 
+	//创建一个存放ServicePort的字典
 	ports := make(map[string]ServicePort)
 
+	//接下来判断容器的多个port中，哪些是对外暴露的
+
 	// Extract configured host port mappings, relevant when using --net=host
+	//获取从inspect中找到的，配置成expose的端口号
 	for port, _ := range container.Config.ExposedPorts {
+		//判断上面expose的端口号是否真的在服务器上监听，是的话，则说明该容器是以--net=host方式运行的
+		log.Println("port: %s", string(port))
 		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
 		ports[string(port)] = servicePort(container, port, published)
 	}
 
 	// Extract runtime port mappings, relevant when using --net=bridge
+	//获取从inspect中找到的，正在工作的对外映射端口
 	for port, published := range container.NetworkSettings.Ports {
+		log.Println("port: %s", string(port))
 		ports[string(port)] = servicePort(container, port, published)
 	}
 
@@ -230,6 +246,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		return
 	}
 
+	//ports to servicePorts
 	servicePorts := make(map[string]ServicePort)
 	for key, port := range ports {
 		if b.config.Internal != true && port.HostPort == "" {
@@ -243,6 +260,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 	isGroup := len(servicePorts) > 1
 	for _, port := range servicePorts {
+		//newService()方法将ServicePort类型转换为Service类型
 		service := b.newService(port, isGroup)
 		if service == nil {
 			if !quiet {
@@ -256,6 +274,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 			log.Println("register failed:", service, err)
 			continue
 		}
+		//将service存放到b实例中
 		b.services[container.ID] = append(b.services[container.ID], service)
 		log.Println("added:", container.ID[:12], service.ID)
 	}

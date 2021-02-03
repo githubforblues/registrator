@@ -226,7 +226,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 	//获取从inspect中找到的，配置成expose的端口号
 	for port, _ := range container.Config.ExposedPorts {
 		//判断上面expose的端口号是否真的在服务器上监听，是的话，则说明该容器是以--net=host方式运行的
-		log.Println("port: %s", string(port))
+		log.Println("port_h: ", string(port))
 		published := []dockerapi.PortBinding{{"0.0.0.0", port.Port()}}
 		ports[string(port)] = servicePort(container, port, published)
 	}
@@ -234,7 +234,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 	// Extract runtime port mappings, relevant when using --net=bridge
 	//获取从inspect中找到的，正在工作的对外映射端口
 	for port, published := range container.NetworkSettings.Ports {
-		log.Println("port: %s", string(port))
+		log.Println("port_b: ", string(port))
 		ports[string(port)] = servicePort(container, port, published)
 	}
 

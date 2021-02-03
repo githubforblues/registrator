@@ -243,7 +243,9 @@ func (b *Bridge) add(containerId string, quiet bool) {
 		ports[string(port)] = servicePort(container, port, published)
 		c++
 	}
+	//根据这个计数变量可以发现，不管端口是否对外暴露，都会创建一个ServicePort对象
 	log.Println("c: ", c)
+	log.Println("lp: ", len(ports))
 
 	if len(ports) == 0 && !quiet {
 		log.Println("ignored:", container.ID[:12], "no published ports")

@@ -109,7 +109,8 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
-	log.Printf("containers_j: %s", string(json.Marshal(containers[0])))
+	r, _ = json.Marshal(containers)
+	log.Printf("containers_j: %s", string(r)
 
 	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
 	//range数组会返回两个值，第一个为索引，第二个为数组元素

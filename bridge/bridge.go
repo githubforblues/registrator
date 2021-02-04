@@ -315,8 +315,8 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	md, _ := json.Marshal(metadata)
 	log.Printf("md: %s", string(md))
-	md, _ := json.Marshal(metadataFromPort)
-	log.Printf("mdfp: %s", string(md))
+	mdfp, _ := json.Marshal(metadataFromPort)
+	log.Printf("mdfp: %s", string(mdfp))
 
 	ignore := mapDefault(metadata, "ignore", "")
 	if ignore != "" {

@@ -289,9 +289,12 @@ func (b *Bridge) add(containerId string, quiet bool) {
 //将ServicePort类型转换为Service类型
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
+	//container.Config.Image示例: consul:latest 或者 nginx:v0.0.1
+	//下面这个变量，会作为注册到consul的service的名称，必须改掉才行
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
 
 	// not sure about this logic. kind of want to remove it.
+	//Hostname是全局变量，表示服务器的主机名
 	hostname := Hostname
 	if hostname == "" {
 		hostname = port.HostIP
@@ -307,7 +310,13 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		port.HostIP = b.config.HostIp
 	}
 
+	//从env和label中解析SERVER_开头的字符串，获取端口号信息
 	metadata, metadataFromPort := serviceMetaData(container.Config, port.ExposedPort)
+
+	md, _ := json.Marshal(metadata)
+	log.Printf("md: %s", string(md))
+	md, _ := json.Marshal(metadataFromPort)
+	log.Printf("mdfp: %s", string(md))
 
 	ignore := mapDefault(metadata, "ignore", "")
 	if ignore != "" {
@@ -319,6 +328,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		if b.config.Explicit {
 			return nil
 		}
+		//就是这个地方，导致consul中出现的service名称很奇怪，需要改掉
 		serviceName = defaultName
 	}
 
@@ -392,6 +402,9 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	delete(metadata, "name")
 	service.Attrs = metadata
 	service.TTL = b.config.RefreshTtl
+
+	ss, _ := json.Marshal(service)
+	log.Printf("##service##: %s", string(ss))
 
 	return service
 }

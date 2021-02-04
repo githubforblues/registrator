@@ -61,6 +61,11 @@ func serviceMetaData(config *dockerapi.Config, port string) (map[string]string, 
 	}
 	metadata := make(map[string]string)
 	metadataFromPort := make(map[string]bool)
+	//meta示例:
+	//"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+	//"HASHICORP_RELEASES=https://releases.hashicorp.com"
+	//"org.opencontainers.image.authors=Consul Team <consul@hashicorp.com>"
+	//"org.opencontainers.image.version=1.9.3"
 	for _, kv := range meta {
 		kvp := strings.SplitN(kv, "=", 2)
 		if strings.HasPrefix(kvp[0], "SERVICE_") && len(kvp) > 1 {

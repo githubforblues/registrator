@@ -290,8 +290,23 @@ func (b *Bridge) add(containerId string, quiet bool) {
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
 	//container.Config.Image示例: consul:latest 或者 nginx:v0.0.1
-	//下面这个变量，会作为注册到consul的service的名称，必须改掉才行
+	//下面这个变量，会作为注册到consul的service的名称
 	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
+
+	//增加判断，将node-exporter和cadvisor分到自己的consul service中
+	if b.config.K8sMode {
+		if defaultName == "pause" {
+			if strings.HasPrefix(container.Name[1:], "k8s_POD_") {
+				tstring := strings.TrimPrefix(container.Name[1:], "k8s_POD_")
+				podName := strings.Split(tstring, "_")[0]
+				tarray := strings.Split(podName, "-")
+				podShortName = strings.Join(tarray[0:len(tarray)-1], "-")
+				if podShortName == "node-exporter" || podShortName == "cadvisor" {
+					defaultName = podShortName
+				}
+			}
+		}
+	}
 
 	// not sure about this logic. kind of want to remove it.
 	//Hostname是全局变量，表示服务器的主机名
@@ -328,7 +343,6 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		if b.config.Explicit {
 			return nil
 		}
-		//就是这个地方，导致consul中出现的service名称很奇怪，需要改掉
 		serviceName = defaultName
 	}
 

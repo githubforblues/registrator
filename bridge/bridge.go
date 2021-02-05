@@ -300,7 +300,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 				tstring := strings.TrimPrefix(container.Name[1:], "k8s_POD_")
 				podName := strings.Split(tstring, "_")[0]
 				tarray := strings.Split(podName, "-")
-				podShortName = strings.Join(tarray[0:len(tarray)-1], "-")
+				podShortName := strings.Join(tarray[0:len(tarray)-1], "-")
 				if podShortName == "node-exporter" || podShortName == "cadvisor" {
 					defaultName = podShortName
 				}

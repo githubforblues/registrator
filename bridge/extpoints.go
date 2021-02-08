@@ -19,7 +19,7 @@ type extensionPoint struct {
 	components map[string]interface{}
 }
 
-//var AdapterFactories = &adapterFactoryExt{newExtensionPoint(new(AdapterFactory)),}
+//初始化阶段执行的函数
 func newExtensionPoint(iface interface{}) *extensionPoint {
 	ep := &extensionPoint{
 		iface:      reflect.TypeOf(iface).Elem(),
@@ -48,9 +48,11 @@ func (ep *extensionPoint) all() map[string]interface{} {
 	return all
 }
 
+//将后端存储注册到register变量中
 func (ep *extensionPoint) register(component interface{}, name string) bool {
 	ep.Lock()
 	defer ep.Unlock()
+	//利用反射获取后端存储结构体的名称
 	if name == "" {
 		name = reflect.TypeOf(component).Elem().Name()
 	}
@@ -58,6 +60,7 @@ func (ep *extensionPoint) register(component interface{}, name string) bool {
 	if exists {
 		return false
 	}
+	//注册
 	ep.components[name] = component
 	return true
 }
@@ -73,8 +76,11 @@ func (ep *extensionPoint) unregister(name string) bool {
 	return true
 }
 
+//判断注册上来的结构体是否实现了注册上来的接口，返回实现的接口的接口名的数组
 func implements(component interface{}) []string {
 	var ifaces []string
+	//该注册机制为双向注册，在项目启动初始化阶段，AdapterFactory接口就已经注册上来了
+	//此处遍历整个registry.extpoints，可以理解为，该注册机制支持多对多注册，即多个接口和多个实现的注册
 	for name, ep := range registry.extpoints {
 		if reflect.TypeOf(component).Implements(ep.iface) {
 			ifaces = append(ifaces, name)
@@ -83,11 +89,14 @@ func implements(component interface{}) []string {
 	return ifaces
 }
 
+//用于被各个后端存储服务的init函数调用，从而将它们注册上来
 func Register(component interface{}, name string) []string {
 	registry.Lock()
 	defer registry.Unlock()
 	var ifaces []string
+	//返回后端存储的Factory结构体所实现的接口名
 	for _, iface := range implements(component) {
+		//调用extensionPoint的register方法进行注册
 		if ok := registry.extpoints[iface].register(component, name); ok {
 			ifaces = append(ifaces, iface)
 		}
